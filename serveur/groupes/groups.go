@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	auth "file_transfert_go/serveur/authentification"
+	"file_transfert_go/serveur/storage"
 	"os"
 )
 
@@ -97,4 +98,23 @@ func AddUserWithCredentials(username, password, groupName string) error {
 	}
 
 	return AddUser(username, groupName)
+}
+func RemoveUser(username string) error {
+	users, err := storage.LoadUsers()
+	if err != nil {
+		return err
+	}
+
+	if _, exists := users[username]; !exists {
+		return errors.New("utilisateur inexistant")
+	}
+
+	delete(users, username)
+
+	data, err := json.MarshalIndent(users, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile("storage/users.json", data, 0644)
 }

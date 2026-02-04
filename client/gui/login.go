@@ -14,7 +14,8 @@ func ShowLogin(a fyne.App) {
 	password := widget.NewPasswordEntry()
 	status := widget.NewLabel("")
 
-	btn := widget.NewButton("Connexion", func() {
+	btn := widget.NewButton("Connexion",
+	func() {
 		token := network.Authenticate(username.Text, password.Text)
 		if token != "" {
 			ShowFiles(a)

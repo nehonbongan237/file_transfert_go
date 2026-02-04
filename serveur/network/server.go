@@ -10,9 +10,14 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"os"
+	"time"
 )
 
 func StartServer(address string) {
+	//serveur UDP lancer e, multidiffusion
+go diffuse()
+	//serveur TCP en ecoute
 	listener, err := net.Listen("tcp", "localhost:8080")
 	if err != nil {
 		log.Fatal("Erreur serveur:", err)
@@ -31,6 +36,15 @@ func StartServer(address string) {
 		go handleClient(conn)
 
 	}
+}
+func diffuse(){
+addr := net.UDPAddr{IP: net.IPv4bcast, Port: 9999}
+conn, _ := net.DialUDP("udp4", nil, &addr)
+for {
+    conn.Write([]byte("SERVER:8080")) // message contenant port
+    time.Sleep(time.Second * 5)
+}
+
 }
 
 func handleClient(conn net.Conn) {
@@ -184,6 +198,38 @@ func handleClient(conn net.Conn) {
 
 			io.Copy(conn, file)
 			storage.LogOperation(user, group, filename, "DOWNLOAD", "SUCCESS")
+			case "HISTORY":
+	user, ok := auth.GetUserByToken(parts[1])
+	if !ok {
+		conn.Write([]byte("ERROR INVALID_TOKEN\n"))
+		continue
+	}
+
+	// Lire le fichier log serveur
+	data, err := os.ReadFile("logs/operations.log")
+	if err != nil {
+		conn.Write([]byte("OK \n")) // aucun log disponible
+		continue
+	}
+
+	lines := strings.Split(string(data), "\n")
+	// Filtrer uniquement les lignes de l'utilisateur
+	var userLines []string
+	for _, l := range lines {
+		if l == "" {
+			continue
+		}
+		fields := strings.Split(l, ",")
+		if len(fields) < 7 {
+			continue
+		}
+		if fields[2] == user { // champ user
+			userLines = append(userLines, l)
+		}
+	}
+
+	// Envoyer en une seule ligne séparée par | (ou une autre séparation)
+	conn.Write([]byte("OK " + strings.Join(userLines, "|") + "\n"))
 
 
 		default:
